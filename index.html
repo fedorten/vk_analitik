@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск групп ВКонтакте</title>
+    <style>
+        /* Общие стили для страницы */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+
+        /* Стили для формы поиска */
+        .search-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        #searchQuery {
+            width: 400px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        #searchQuery:focus {
+            border-color: #2980b9;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Стили для контейнера с результатами */
+        #content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Стили для каждого блока с информацией о группе */
+        .group-card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .group-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .group-card h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .group-card p {
+            margin: 8px 0;
+            font-size: 1rem;
+            color: #555;
+        }
+
+        /* Стили для кнопки "Показать еще" */
+        #loadMore {
+            display: none;
+            margin: 20px auto;
+            padding: 12px 24px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #loadMore:hover {
+            background-color: #2980b9;
+        }
+
+        /* Стили для сообщения "Группы не найдены" */
+        .no-results {
+            text-align: center;
+            color: #777;
+            font-style: italic;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Поиск групп ВКонтакте</h1>
+    <div class="search-container">
+        <input type="text" id="searchQuery" placeholder="Введите запрос..." />
+        <button onclick="searchGroups()">Поиск</button>
+    </div>
+
+    <div id="content"></div>
+    <button id="loadMore" onclick="loadMoreGroups()">Показать еще</button>
+
+    <script>
+        let currentOffset = 0;
+        let currentQuery = "";
+
+        async function searchGroups() {
+            currentQuery = document.getElementById("searchQuery").value;
+            if (!currentQuery) {
+                alert("Введите запрос!");
+                return;
+            }
+
+            currentOffset = 0; // Сбрасываем offset при новом поиске
+            const content = document.getElementById("content");
+            content.innerHTML = ""; // Очищаем предыдущие результаты
+            await loadMoreGroups(); // Загружаем первые 5 результатов
+        }
+
+        async function loadMoreGroups() {
+            const content = document.getElementById("content");
+            const loadMoreButton = document.getElementById("loadMore");
+
+            const response = await fetch(`http://127.0.0.1:8000/search?q=${encodeURIComponent(currentQuery)}&offset=${currentOffset}`);
+            const data = await response.json();
+
+            if (data.length === 0 && currentOffset === 0) {
+                content.innerHTML = "<p class='no-results'>Группы не найдены.</p>";
+                loadMoreButton.style.display = "none";
+                return;
+            }
+
+            if (data.length === 0) {
+                loadMoreButton.style.display = "none";
+                return;
+            }
+
+            data.forEach(group => {
+                const groupCard = document.createElement("div");
+                groupCard.className = "group-card";
+                groupCard.innerHTML = `
+                    <h2>${group.name} (ID: ${group.group_id})</h2>
+                    <p>Участников: ${group.members_count}</p>
+                    <p>Женщины: ${group.female_percent.toFixed(1)}%</p>
+                    <p>Мужчины: ${group.male_percent.toFixed(1)}%</p>
+                    <p>Средний возраст: ${group.avg_age ? group.avg_age.toFixed(1) : "Нет данных"}</p>
+                `;
+                content.appendChild(groupCard);
+            });
+
+            currentOffset += 5; // Увеличиваем offset для следующей загрузки
+            loadMoreButton.style.display = "block"; // Показываем кнопку "Показать еще"
+        }
+    </script>
+</body>
+</html>
